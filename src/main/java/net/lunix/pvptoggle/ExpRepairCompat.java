@@ -18,7 +18,7 @@ public class ExpRepairCompat {
             Field hooksField = exprepairClass.getField("REPAIR_SUPPRESSION_HOOKS");
             List<Predicate<ServerPlayer>> hooks = (List<Predicate<ServerPlayer>>) hooksField.get(null);
             hooks.add(player ->
-                PvpToggle.disableRepairInPvP && player.getAttachedOrElse(PvpToggle.PVP_FLAGGED, false)
+                PvpToggle.disableRepairInPvP && PlayerDataStore.isPvpFlagged(player.getUUID())
             );
             LOGGER.info("[pvpToggle] expRepair integration enabled.");
         } catch (NoSuchFieldException e) {

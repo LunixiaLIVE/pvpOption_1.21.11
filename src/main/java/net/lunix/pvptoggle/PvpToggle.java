@@ -14,7 +14,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
-import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
@@ -41,8 +40,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class PvpToggle implements ModInitializer {
 
     public static final String MOD_ID = "pvptoggle";
-    private static final Logger LOGGER = LoggerFactory.getLogger("pvpToggle");
+    static final Logger LOGGER = LoggerFactory.getLogger("pvpToggle");
 
+    /** Legacy — kept only for migrating existing NBT data to PlayerDataStore. Do not use. */
     public static final AttachmentType<Boolean> PVP_FLAGGED = AttachmentRegistry.create(
         Identifier.fromNamespaceAndPath(MOD_ID, "pvp_flagged"),
         builder -> builder.persistent(Codec.BOOL).initializer(() -> false)
@@ -73,6 +73,7 @@ public class PvpToggle implements ModInitializer {
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
             configPath = FabricLoader.getInstance().getConfigDir().resolve("pvptoggle.json");
             loadConfig();
+            PlayerDataStore.load();
             applyServerPvp(server, true);
         });
 
@@ -87,8 +88,8 @@ public class PvpToggle implements ModInitializer {
 
             if (!pvpEnabled) return false; // system disabled — block all PvP
 
-            boolean attackerFlagged = attacker.getAttachedOrElse(PVP_FLAGGED, false);
-            boolean defenderFlagged = defender.getAttachedOrElse(PVP_FLAGGED, false);
+            boolean attackerFlagged = PlayerDataStore.isPvpFlagged(attacker.getUUID());
+            boolean defenderFlagged = PlayerDataStore.isPvpFlagged(defender.getUUID());
 
             if (!attackerFlagged || !defenderFlagged) {
                 if (!attackerFlagged) {
@@ -116,11 +117,6 @@ public class PvpToggle implements ModInitializer {
             return true;
         });
 
-        // Persist PvP flag through death/respawn and dimension changes
-        ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) ->
-            newPlayer.setAttached(PVP_FLAGGED, oldPlayer.getAttachedOrElse(PVP_FLAGGED, false))
-        );
-
         // Tick: warmup completion, action bar HUD, auto-unflag
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             if (server.getTickCount() % 20 != 0) return;
@@ -144,7 +140,7 @@ public class PvpToggle implements ModInitializer {
 
                 // Auto-unflag idle players
                 if (autoUnflagMinutes > 0
-                        && player.getAttachedOrElse(PVP_FLAGGED, false)
+                        && PlayerDataStore.isPvpFlagged(uuid)
                         && getRemainingCooldown(uuid) == 0
                         && !warmupExpiry.containsKey(uuid)) {
                     Long lastActivity = lastActivityTime.get(uuid);
@@ -156,6 +152,17 @@ public class PvpToggle implements ModInitializer {
                     }
                 }
             }
+        });
+
+        // Migrate legacy NBT pvpFlagged data to PlayerDataStore and remove from NBT
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+            ServerPlayer player = handler.getPlayer();
+            boolean legacyFlagged = player.getAttachedOrElse(PVP_FLAGGED, false);
+            if (legacyFlagged && !PlayerDataStore.isPvpFlagged(player.getUUID())) {
+                LOGGER.info("Migrating legacy pvpFlagged for player {}", player.getName().getString());
+                PlayerDataStore.setPvpFlagged(player.getUUID(), true);
+            }
+            player.setAttached(PVP_FLAGGED, null);
         });
 
         // Cleanup on disconnect
@@ -192,7 +199,7 @@ public class PvpToggle implements ModInitializer {
             return;
         }
 
-        if (pvpEnabled && player.getAttachedOrElse(PVP_FLAGGED, false)) {
+        if (pvpEnabled && PlayerDataStore.isPvpFlagged(player.getUUID())) {
             long cooldown = getRemainingCooldown(uuid);
             if (cooldown > 0) {
                 player.displayClientMessage(Component.literal(
@@ -213,7 +220,7 @@ public class PvpToggle implements ModInitializer {
     // =========================================================================
 
     private static void activateFlag(ServerPlayer player, MinecraftServer server) {
-        player.setAttached(PVP_FLAGGED, true);
+        PlayerDataStore.setPvpFlagged(player.getUUID(), true);
         lastActivityTime.put(player.getUUID(), System.currentTimeMillis());
 
         if (broadcastToggle) {
@@ -228,7 +235,7 @@ public class PvpToggle implements ModInitializer {
     }
 
     private static void deactivateFlag(ServerPlayer player, MinecraftServer server) {
-        player.setAttached(PVP_FLAGGED, false);
+        PlayerDataStore.setPvpFlagged(player.getUUID(), false);
         UUID uuid = player.getUUID();
         cooldownExpiry.remove(uuid);
         lastActivityTime.remove(uuid);
@@ -312,7 +319,7 @@ public class PvpToggle implements ModInitializer {
 
     private int toggle(CommandSourceStack source) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
-        boolean current = player.getAttachedOrElse(PVP_FLAGGED, false);
+        boolean current = PlayerDataStore.isPvpFlagged(player.getUUID());
         boolean inWarmup = warmupExpiry.containsKey(player.getUUID());
         return setFlag(source, !current && !inWarmup);
     }
@@ -336,7 +343,7 @@ public class PvpToggle implements ModInitializer {
                 ));
                 return 1;
             }
-            if (player.getAttachedOrElse(PVP_FLAGGED, false)) {
+            if (PlayerDataStore.isPvpFlagged(uuid)) {
                 long remaining = getRemainingCooldown(uuid);
                 if (remaining > 0) {
                     player.sendSystemMessage(Component.literal(
@@ -354,7 +361,7 @@ public class PvpToggle implements ModInitializer {
             return 1;
         }
 
-        if (player.getAttachedOrElse(PVP_FLAGGED, false) || warmupExpiry.containsKey(uuid)) {
+        if (PlayerDataStore.isPvpFlagged(uuid) || warmupExpiry.containsKey(uuid)) {
             player.sendSystemMessage(Component.literal(ChatFormatting.GRAY + "PvP is already enabled (or warming up)."));
             return 1;
         }
@@ -376,7 +383,7 @@ public class PvpToggle implements ModInitializer {
     private int status(CommandSourceStack source) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
         UUID uuid = player.getUUID();
-        boolean flagged = player.getAttachedOrElse(PVP_FLAGGED, false);
+        boolean flagged = PlayerDataStore.isPvpFlagged(uuid);
         boolean inWarmup = warmupExpiry.containsKey(uuid);
 
         if (inWarmup) {
@@ -401,7 +408,7 @@ public class PvpToggle implements ModInitializer {
 
     private int listFlagged(CommandSourceStack source) {
         var flagged = source.getServer().getPlayerList().getPlayers().stream()
-            .filter(p -> p.getAttachedOrElse(PVP_FLAGGED, false))
+            .filter(p -> PlayerDataStore.isPvpFlagged(p.getUUID()))
             .toList();
 
         if (flagged.isEmpty()) {
@@ -549,7 +556,7 @@ public class PvpToggle implements ModInitializer {
         UUID uuid = target.getUUID();
         warmupExpiry.remove(uuid);
 
-        boolean alreadyFlagged = target.getAttachedOrElse(PVP_FLAGGED, false);
+        boolean alreadyFlagged = PlayerDataStore.isPvpFlagged(target.getUUID());
         String state = enabled ? ChatFormatting.RED + "ENABLED" : ChatFormatting.GREEN + "DISABLED";
 
         if (enabled && !alreadyFlagged) {
@@ -570,7 +577,7 @@ public class PvpToggle implements ModInitializer {
 
     private int adminStatus(CommandSourceStack source, ServerPlayer target) {
         UUID uuid = target.getUUID();
-        boolean flagged = target.getAttachedOrElse(PVP_FLAGGED, false);
+        boolean flagged = PlayerDataStore.isPvpFlagged(uuid);
         boolean inWarmup = warmupExpiry.containsKey(uuid);
         long remaining = getRemainingCooldown(uuid);
 
