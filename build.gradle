@@ -12,7 +12,7 @@ base {
 
 loom {
     mods {
-        "pvptoggle" {
+        "pvpoption" {
             sourceSet sourceSets.main
         }
     }
@@ -29,7 +29,7 @@ dependencies {
 
     // Optional expRepair inter-mod compat — build expRepair first to generate the jar
     // devlibs jar retains Mojang names, matching this project's mappings
-    compileOnly fileTree(dir: "../ExpRepair/expRepair/build/devlibs", include: "exprepair-*-dev.jar")
+    compileOnly fileTree(dir: "../expRepair/fabric/build/devlibs", include: "exprepair-*-dev.jar")
 }
 
 processResources {

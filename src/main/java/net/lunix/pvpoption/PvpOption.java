@@ -1,4 +1,4 @@
-package net.lunix.pvptoggle;
+package net.lunix.pvpoption;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -37,10 +37,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class PvpToggle implements ModInitializer {
+public class PvpOption implements ModInitializer {
 
-    public static final String MOD_ID = "pvptoggle";
-    static final Logger LOGGER = LoggerFactory.getLogger("pvpToggle");
+    public static final String MOD_ID = "pvpoption";
+    static final Logger LOGGER = LoggerFactory.getLogger("pvpOption");
 
     /** Legacy — kept only for migrating existing NBT data to PlayerDataStore. Do not use. */
     public static final AttachmentType<Boolean> PVP_FLAGGED = AttachmentRegistry.create(
@@ -71,7 +71,7 @@ public class PvpToggle implements ModInitializer {
     @Override
     public void onInitialize() {
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
-            configPath = FabricLoader.getInstance().getConfigDir().resolve("pvptoggle.json");
+            configPath = FabricLoader.getInstance().getConfigDir().resolve("pvpoption.json");
             loadConfig();
             PlayerDataStore.load();
             applyServerPvp(server, true);
@@ -94,7 +94,7 @@ public class PvpToggle implements ModInitializer {
             if (!attackerFlagged || !defenderFlagged) {
                 if (!attackerFlagged) {
                     attacker.sendSystemMessage(Component.literal(
-                        ChatFormatting.YELLOW + "You are not flagged for PvP. Use /pvptoggle to opt in."
+                        ChatFormatting.YELLOW + "You are not flagged for PvP. Use /pvpoption to opt in."
                     ));
                 } else {
                     attacker.sendSystemMessage(Component.literal(
@@ -256,7 +256,7 @@ public class PvpToggle implements ModInitializer {
     // =========================================================================
 
     private void registerCommands(CommandDispatcher<CommandSourceStack> dispatcher) {
-        var root = Commands.literal("pvptoggle")
+        var root = Commands.literal("pvpoption")
             .then(Commands.literal("on")
                 .executes(ctx -> setFlag(ctx.getSource(), true)))
             .then(Commands.literal("off")
@@ -433,7 +433,7 @@ public class PvpToggle implements ModInitializer {
     // =========================================================================
 
     private int showAdminSettings(CommandSourceStack source) {
-        source.sendSystemMessage(Component.literal(ChatFormatting.GOLD + "--- pvpToggle Admin Settings ---"));
+        source.sendSystemMessage(Component.literal(ChatFormatting.GOLD + "--- pvpOption Admin Settings ---"));
         source.sendSystemMessage(Component.literal(
             "  system:            " + (pvpEnabled ? ChatFormatting.GREEN + "ENABLED" : ChatFormatting.RED + "DISABLED")
         ));
@@ -477,7 +477,7 @@ public class PvpToggle implements ModInitializer {
         }
 
         Component msg = Component.literal(
-            ChatFormatting.GOLD + "[pvpToggle] PvP flagging has been "
+            ChatFormatting.GOLD + "[pvpOption] PvP flagging has been "
             + (enabled ? ChatFormatting.GREEN + "ENABLED" : ChatFormatting.RED + "DISABLED")
             + ChatFormatting.GOLD + " server-wide by an admin."
         );
@@ -543,7 +543,7 @@ public class PvpToggle implements ModInitializer {
 
     private int reloadConfig(CommandSourceStack source, boolean silent) {
         loadConfig();
-        Component msg = Component.literal(ChatFormatting.GREEN + "[pvpToggle] Config reloaded by an admin.");
+        Component msg = Component.literal(ChatFormatting.GREEN + "[pvpOption] Config reloaded by an admin.");
         if (silent) {
             source.sendSystemMessage(msg);
         } else {
@@ -621,7 +621,7 @@ public class PvpToggle implements ModInitializer {
 
     /**
      * Persists pvp= to server.properties. In-memory control is handled by DedicatedServerMixin
-     * which overrides isPvpAllowed() to return PvpToggle.pvpEnabled at runtime — no restart needed.
+     * which overrides isPvpAllowed() to return PvpOption.pvpEnabled at runtime — no restart needed.
      */
     private static void applyServerPvp(MinecraftServer server, boolean pvp) {
         Path propsPath = FabricLoader.getInstance().getGameDir().resolve("server.properties");
@@ -637,10 +637,10 @@ public class PvpToggle implements ModInitializer {
             }
             if (!updated.equals(content)) {
                 Files.writeString(propsPath, updated);
-                LOGGER.info("[pvpToggle] Set pvp={} in server.properties.", pvp);
+                LOGGER.info("[pvpOption] Set pvp={} in server.properties.", pvp);
             }
         } catch (Exception e) {
-            LOGGER.warn("[pvpToggle] Could not update server.properties: {}", e.getMessage());
+            LOGGER.warn("[pvpOption] Could not update server.properties: {}", e.getMessage());
         }
     }
 

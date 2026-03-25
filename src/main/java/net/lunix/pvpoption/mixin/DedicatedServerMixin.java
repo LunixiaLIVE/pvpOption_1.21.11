@@ -1,6 +1,6 @@
-package net.lunix.pvptoggle.mixin;
+package net.lunix.pvpoption.mixin;
 
-import net.lunix.pvptoggle.PvpToggle;
+import net.lunix.pvpoption.PvpOption;
 import net.minecraft.server.level.ServerLevel;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class DedicatedServerMixin {
 
     @Inject(method = "isPvpAllowed", at = @At("HEAD"), cancellable = true)
-    private void pvpToggle_isPvpAllowed(CallbackInfoReturnable<Boolean> cir) {
-        cir.setReturnValue(PvpToggle.pvpEnabled);
+    private void pvpOption_isPvpAllowed(CallbackInfoReturnable<Boolean> cir) {
+        cir.setReturnValue(PvpOption.pvpEnabled);
     }
 }

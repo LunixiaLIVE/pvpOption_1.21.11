@@ -1,22 +1,22 @@
 {
   "schemaVersion": 1,
-  "id": "pvptoggle",
+  "id": "pvpoption",
   "version": "${version}",
-  "name": "pvpToggle",
+  "name": "pvpOption",
   "description": "Opt-in PvP flagging system. Only players flagged for PvP can deal and take damage from each other.",
   "authors": ["LunixiaLIVE"],
   "contact": {
-    "sources": "https://github.com/LunixiaLIVE/pvpToggle"
+    "sources": "https://github.com/LunixiaLIVE/pvpOption"
   },
   "license": "MIT",
   "environment": "server",
   "entrypoints": {
     "main": [
-      "net.lunix.pvptoggle.PvpToggle"
+      "net.lunix.pvpoption.PvpOption"
     ]
   },
   "mixins": [
-    "pvptoggle.mixins.json"
+    "pvpoption.mixins.json"
   ],
   "depends": {
     "fabricloader": ">=${loader_version}",

@@ -1,7 +1,7 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "net.lunix.pvptoggle.mixin",
+  "package": "net.lunix.pvpoption.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "DedicatedServerMixin"

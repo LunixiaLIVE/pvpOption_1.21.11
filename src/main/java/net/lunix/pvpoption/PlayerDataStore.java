@@ -1,4 +1,4 @@
-package net.lunix.pvptoggle;
+package net.lunix.pvpoption;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -19,7 +19,7 @@ public class PlayerDataStore {
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Path DATA_PATH = FabricLoader.getInstance().getConfigDir()
-            .resolve("pvptoggle").resolve("playerdata.json");
+            .resolve("pvpoption").resolve("playerdata.json");
     private static final Type MAP_TYPE = new TypeToken<Map<String, PlayerEntry>>() {}.getType();
 
     private static Map<String, PlayerEntry> data = new HashMap<>();
@@ -34,7 +34,7 @@ public class PlayerDataStore {
                 Map<String, PlayerEntry> loaded = GSON.fromJson(reader, MAP_TYPE);
                 if (loaded != null) data = loaded;
             } catch (IOException e) {
-                PvpToggle.LOGGER.error("Failed to load player data", e);
+                PvpOption.LOGGER.error("Failed to load player data", e);
             }
         }
     }
@@ -46,7 +46,7 @@ public class PlayerDataStore {
                 GSON.toJson(data, MAP_TYPE, writer);
             }
         } catch (IOException e) {
-            PvpToggle.LOGGER.error("Failed to save player data", e);
+            PvpOption.LOGGER.error("Failed to save player data", e);
         }
     }
 
