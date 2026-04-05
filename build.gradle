@@ -27,9 +27,6 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
-    // Optional expRepair inter-mod compat — build expRepair first to generate the jar
-    // devlibs jar retains Mojang names, matching this project's mappings
-    compileOnly fileTree(dir: "../expRepair/fabric/build/devlibs", include: "exprepair-*-dev.jar")
 }
 
 processResources {
@@ -69,6 +66,10 @@ jar {
     from("LICENSE") {
         rename { "${it}_${baseName}" }
     }
+}
+
+tasks.named('remapJar') {
+    archiveFileName = "${project.archives_base_name}-${project.mod_version}_MC-${project.minecraft_version}.jar"
 }
 
 publishing {
